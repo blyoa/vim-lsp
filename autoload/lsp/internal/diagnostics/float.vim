@@ -17,7 +17,11 @@ function! lsp#internal#diagnostics#float#_enable() abort
 
     let s:Dispose = lsp#callbag#pipe(
         \ lsp#callbag#merge(
-        \   lsp#callbag#fromEvent(['CursorMoved', 'CursorHold']),
+        \   lsp#callbag#pipe(
+        \       lsp#callbag#fromEvent(['CursorMoved', 'CursorMovedI']),
+        \       lsp#callbag#map({_->{'bufnr': bufnr('%'), 'curpos': getcurpos()[0:2], 'changedtick': b:changedtick }}),
+        \       lsp#callbag#distinctUntilChanged({a,b -> a['bufnr'] == b['bufnr'] && a['curpos'] == b['curpos'] && a['changedtick'] == b['changedtick']}),
+        \   ),
         \   lsp#callbag#pipe(
         \       lsp#callbag#fromEvent(['InsertEnter']),
         \       lsp#callbag#filter({_->!g:lsp_diagnostics_float_insert_mode_enabled}),
@@ -27,8 +31,6 @@ function! lsp#internal#diagnostics#float#_enable() abort
         \ lsp#callbag#filter({_->g:lsp_diagnostics_float_cursor}),
         \ lsp#callbag#tap({_->s:hide_float()}),
         \ lsp#callbag#debounceTime(g:lsp_diagnostics_float_delay),
-        \ lsp#callbag#map({_->{'bufnr': bufnr('%'), 'curpos': getcurpos()[0:2], 'changedtick': b:changedtick }}),
-        \ lsp#callbag#distinctUntilChanged({a,b -> a['bufnr'] == b['bufnr'] && a['curpos'] == b['curpos'] && a['changedtick'] == b['changedtick']}),
         \ lsp#callbag#filter({_->mode() is# 'n'}),
         \ lsp#callbag#filter({_->getbufvar(bufnr('%'), '&buftype') !=# 'terminal' }),
         \ lsp#callbag#map({_->lsp#internal#diagnostics#under_cursor#get_diagnostic()}),
