@@ -171,14 +171,36 @@ function! s:quickpick_accept_code_action(sync, bufnr, data, ...) abort
 endfunction
 
 function! s:handle_disabled_action(code_action) abort
-    if has_key(a:code_action, 'disabled')
-        echo 'This action is disabled: ' . a:code_action['disabled']['reason']
+    if has_key(a:code_action['code_action'], 'disabled')
+        echo 'This action is disabled: ' . a:code_action['code_action']['disabled']['reason']
         return v:true
     endif
     return v:false
 endfunction
 
-function! s:handle_one_code_action(server_name, sync, bufnr, command_or_code_action) abort
+function! s:handle_one_code_action(server_name, sync, bufnr, code_action) abort
+    if lsp#capabilities#has_code_action_resolve_provider(a:server_name)
+        let l:command_id = lsp#_new_command()
+        call lsp#send_request(a:server_name, {
+            \ 'method': 'codeAction/resolve',
+            \ 'params': a:code_action,
+            \ 'sync': a:sync,
+            \ 'on_notification': { data -> s:handle_code_action_resolve(a:server_name, a:sync, a:bufnr, data) },
+            \ })
+    else
+        call s:execute_code_action(a:server_name, a:sync, a:bufnr, a:code_action)
+    endif
+endfunction
+
+function! s:handle_code_action_resolve(server_name, sync, bufnr, data) abort
+    if lsp#client#is_error(a:data['response'])
+        call lsp#utils#error('Failed to CodeActionResolve for ' . a:server_name . ': ' . lsp#client#error_message(a:data['response']))
+        return
+    endif
+    call s:execute_code_action(a:server_name, a:sync, a:bufnr, a:data['response']['result'])
+endfunction
+
+function! s:execute_code_action(server_name, sync, bufnr, command_or_code_action) abort
     " has WorkspaceEdit.
     if has_key(a:command_or_code_action, 'edit')
         call lsp#utils#workspace_edit#apply_workspace_edit(a:command_or_code_action['edit'])

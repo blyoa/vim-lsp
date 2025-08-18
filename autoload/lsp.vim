@@ -537,6 +537,9 @@ function! lsp#default_get_supported_capabilities(server_info) abort
     \         },
     \         'isPreferredSupport': v:true,
     \         'disabledSupport': v:true,
+    \         'resolveSupport': {
+    \           'properties': ['edit'],
+    \         },
     \       },
     \       'codeLens': {
     \           'dynamicRegistration': v:false,
