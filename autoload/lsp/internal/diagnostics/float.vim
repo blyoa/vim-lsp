@@ -27,7 +27,7 @@ function! lsp#internal#diagnostics#float#_enable() abort
     "
     " InsertEnter - If insert mode is entered and we do not show floats in the
     " insert mode (g:lsp_diagnostics_float_insert_mode_enabled) we want to hide
-    " the cursor.  Similar to |CursorHold| we do not show the float due to the
+    " the float.  Similar to |CursorHold| we do not show the float due to the
     " "mode() is# 'n'" check, but it seems more like an accident than the
     " intended action.
     let s:Dispose = lsp#callbag#pipe(
