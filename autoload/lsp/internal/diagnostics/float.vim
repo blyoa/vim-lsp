@@ -15,10 +15,9 @@ function! lsp#internal#diagnostics#float#_enable() abort
     if s:enabled | return | endif
     let s:enabled = 1
 
-    " CursorMoved - Movement in normal or insert mode is expected to hide the
-    " float and, potentially, show it later after a delay of
-    " 'g:lsp_diagnostics_float_delay'.  So we always call 'hide_float()' for
-    " this event, and may call 'show_float()' later.
+    " CursorMoved - 'hide_float()' is called when the cursor position has
+    " changed.  After a delay of 'g:lsp_diagnostics_float_delay',
+    " 'show_float()' is called if there is a diagnostic under the cursor.
     "
     " CursorHold - If the cursor did not move long enough in the normal mode, we
     " want to hide the float.  So we want to call 'hide_float()'.  Because of
@@ -32,7 +31,19 @@ function! lsp#internal#diagnostics#float#_enable() abort
     " intended action.
     let s:Dispose = lsp#callbag#pipe(
         \ lsp#callbag#merge(
-        \   lsp#callbag#fromEvent(['CursorMoved']),
+        \   lsp#callbag#pipe(
+        \       lsp#callbag#fromEvent(['CursorMoved']),
+        \       lsp#callbag#map({_->{
+        \         'bufnr': bufnr('%'),
+        \         'curpos': getcurpos()[0:2],
+        \         'changedtick': b:changedtick
+        \       }}),
+        \       lsp#callbag#distinctUntilChanged({a,b ->
+        \            a['bufnr'] == b['bufnr']
+        \         && a['curpos'] == b['curpos']
+        \         && a['changedtick'] == b['changedtick']
+        \       }),
+        \   ),
         \   lsp#callbag#pipe(
         \       lsp#callbag#fromEvent(['InsertEnter']),
         \       lsp#callbag#filter({_->!g:lsp_diagnostics_float_insert_mode_enabled}),
